@@ -11,7 +11,7 @@ class Tendon_polymer_Dataset(data.Dataset):
         self.seg = seg
         self.data = []
 
-        self.train_freq = [1, 2, 3, 4, 5]  # [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+        self.train_freq = [1, 2, 4, 5]  # [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
         self.test_freq = [3]  # [0.15, 0.45]
         if stage == "train":
             path = "./tendon_data/20230928/training_data"
@@ -32,9 +32,11 @@ class Tendon_polymer_Dataset(data.Dataset):
         data = data[::10, :]
         data[:, 1] = data[:, 1] - data[0, 1]
         data[:, 6] = data[:, 6] - data[0, 6]
-        freqarray = np.ones(data.shape[0]).astype("float32")[:, np.newaxis] * freq / 10
-        data = np.hstack([data, freqarray])
+        data = np.hstack([data, np.ones(data.shape[0]).astype("float32")[:, np.newaxis]])  # add flag colum, all set 1
+        data[0, 9] = 0  # set initial flag 0
         data = np.vstack([np.zeros((self.seg, 10)), data])
+        freqarray = np.ones(data.shape[0]).astype("float32")[:, np.newaxis] * freq / 10  # add frequency colum
+        data = np.hstack([data, freqarray])
         print(data.shape, max(data[:, 1]), max(data[:, 6]))
         # self.data.extend([data[j * self.seg:(j + 1) * self.seg] for j in range(data.shape[0] // self.seg - 1)])
         return data
@@ -50,9 +52,12 @@ class Tendon_polymer_Dataset(data.Dataset):
             data_ind = np.random.randint(0, len(self.test_freq), 1)[0]
         seq_ind = np.random.randint(1, self.data[data_ind].shape[0] - self.seg*rs, 1)[0]
 
-        tendon_disp = np.hstack([self.data[data_ind][[seq_ind+j*rs for j in range(self.seg)], 1:2]/6,
-                                 self.data[data_ind][[seq_ind-1+j*rs for j in range(self.seg)], 6:7]/100,
-                                 self.data[data_ind][[seq_ind-1+j*rs for j in range(self.seg)], 9:10]])
+        # tendon_disp = np.hstack([self.data[data_ind][[seq_ind+j*rs for j in range(self.seg)], 1:2]/6,
+        #                          self.data[data_ind][[seq_ind-1+j*rs for j in range(self.seg)], 6:7]/100,
+        #                          self.data[data_ind][[seq_ind-1+j*rs for j in range(self.seg)], 9:10]])
+        tendon_disp = np.hstack([self.data[data_ind][[seq_ind + j * rs for j in range(self.seg)], 1:2] / 6,
+                                 self.data[data_ind][[seq_ind - 1 + j * rs for j in range(self.seg)], 9:10],   # flag
+                                 self.data[data_ind][[seq_ind - 1 + j * rs for j in range(self.seg)], 10:11]])   # freq
         # print(tendon_disp.shape)
         tip_pos = self.data[data_ind][[seq_ind+j*rs for j in range(self.seg)], 6:7]/100
 
@@ -212,18 +217,32 @@ if __name__ == '__main__':
     # plt.show()
     '''
 
-    plt.figure(figsize=(20, 12))
-    test_freq = [3, 4]
+    plt.figure(figsize=(18, 12))
+    plt.tick_params(labelsize=30)
+    test_freq = [1, 2, 3, 4, 5]
     path = "./tendon_data/20230928/training_data"
+    for i, freq in enumerate(test_freq):
+        data_path = os.path.join(path, "data_{}.txt".format(str(freq)))
+        data = np.loadtxt(data_path, dtype=np.float32, skiprows=1, delimiter=',', unpack=False, encoding='utf-8')
+        # data[:, 1] = data[:, 1] - data[0, 1]
+        # data[:, 6] = data[:, 6] - data[0, 6]
+        plt.plot(data[:, 1], data[:, 6], linewidth=2, label="Non-zero baseline {}Hz".format(freq/10))
+
+    test_freq = [5]
     path = "./tendon_data/20230928/eval_data/"
     for i, freq in enumerate(test_freq):
         data_path = os.path.join(path, "data_{}.txt".format(str(freq)))
         data = np.loadtxt(data_path, dtype=np.float32, skiprows=1, delimiter=',', unpack=False, encoding='utf-8')
         # data[:, 1] = data[:, 1] - data[0, 1]
         # data[:, 6] = data[:, 6] - data[0, 6]
-        plt.plot(data[:, 1], data[:, 6], linewidth=4, label="{}.Hz".format(freq/10))
-        plt.xlabel("Tendon displacement")
-        plt.ylabel("Tip angle X (deg)")
+        plt.plot(data[:, 1], data[:, 6], '--', linewidth=3, label="Zero baseline {}Hz".format(freq / 10))
+    plt.xlim([-1, 6])
+    plt.ylim([29, 100])
+    plt.grid()
+    plt.xlabel("Tendon displacement", fontsize=30)
+    plt.ylabel("Tip angle X (deg)", fontsize=30)
+    plt.legend(fontsize=20)
+    plt.savefig("./results/tendon_tipAng-tendondisp_zerobaseline{}Hz.jpg".format(test_freq[0]/10))
     plt.show()
 
 

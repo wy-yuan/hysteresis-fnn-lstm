@@ -24,7 +24,7 @@ def load_data(filename, seg, resample=True):
     print(data_tension.shape, data_time.shape, Last_Marker.shape)
 
     if resample:
-        xp = np.linspace(0, len(data_tension) - 1, 200)
+        xp = np.linspace(0, len(data_tension) - 1, 2000)
         tension_lin = interp1d(np.arange(len(data_tension)), data_tension)
         tension_resample = tension_lin(xp)
         tipdist_lin = interp1d(np.arange(len(data_tipdist)), data_tipdist)
@@ -54,17 +54,20 @@ if __name__ == '__main__':
     path = "./checkpoints/Tend_LSTM_L2_bs16_train10-20-30_bsfirst_lossall_pos0/Tend_LSTM_L2_bs16_epoch50.pt"
     path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg45_bsfirst_lossall_pos0/Tend_LSTM_L2_bs16_epoch300.pt"
     path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg45_bsfirst_pos0_rs/Tend_LSTM_L2_bs16_epoch100.pt"
-    path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos0_rs/Tend_LSTM_L2_bs16_epoch74_best2.651146920900496.pt"
+    path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos0_rs/Tend_LSTM_L2_bs16_epoch74_best2.651146920900496.pt"   # rs- random sample
+    # path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos1_nofreq/Tend_LSTM_L2_bs16_epoch275_best1.9715501372776334.pt"
+    path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos1_freq/Tend_LSTM_L2_bs16_epoch297_best1.9024102035022916.pt"
+    path = "./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos1_rs_freq/Tend_LSTM_L2_bs16_epoch353_best1.2569025423791673.pt"
     # model = FFNet()
     model.load_state_dict(torch.load(path, map_location=device))
     model.cuda()
     model.eval()
 
-    path = "C:/Users/wangyuan/Documents/CV/BCH/data from Yash/Frequency_Trials/"
+    path = "./tendon_data/Frequency_Trials/"
     seg = 1
     test_freq = ["15"]
-    matfile = os.path.join(path, "f0{}_data_2.mat".format(test_freq[0]))
-    matfile = os.path.join(path, "Random_data.mat")
+    matfile = os.path.join(path, "f0{}_data.mat".format(test_freq[0]))
+    # matfile = os.path.join(path, "Random_data.mat")
     tension, tip_marker_distance, time = load_data(matfile, seg, resample=True)
 
     joints = tension.astype("float32") / 5
@@ -77,12 +80,13 @@ if __name__ == '__main__':
     h_ = hidden
     for i in range(tension.shape[0]):
         joint = joints[i:i+1, 0:1]
-        input_ = np.hstack([joint, pre_pos, freq])
+        # input_ = np.hstack([joint, pre_pos])  # , freq
+        input_ = np.hstack([joint, pre_pos, freq])  # , freq
         output, h_ = model(torch.tensor([input_]).to(device), h_)
         pre_pos = output.detach().cpu().numpy()[0]
         out.append(pre_pos[0])
     out = np.array(out)
-    np.save("./results/Tend_Non0baselineForTrain_random_out.npy", out[seg:, 0]*100)
+    # np.save("./results/Tend_Non0baselineForTrain_random_out.npy", out[seg:, 0]*100)
 
     out2 = []
     joints = tension.astype("float32") / 5
@@ -94,7 +98,8 @@ if __name__ == '__main__':
     for i in range(tension.shape[0] - seg):
         joint = joints[i + 1:i + seg + 1, 0:1]
         # pre_pos = pos[i:i+seg, 0:1]
-        input_ = np.hstack([joint, pre_pos*0, freq])
+        # input_ = np.hstack([joint, pre_pos])   # freq
+        input_ = np.hstack([joint, pre_pos, freq])   # freq
         output, h_ = model(torch.tensor([input_]).to(device), h_)
         predict_pos = output.detach().cpu().numpy()[0]
         pre_pos = predict_pos

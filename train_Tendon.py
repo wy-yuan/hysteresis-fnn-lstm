@@ -114,7 +114,7 @@ def main():
     parser = argparse.ArgumentParser(description='PyTorch Example')
     parser.add_argument('--batch_size', type=int, default=16, metavar='N',
                         help='input batch size for training (default: 16)')
-    parser.add_argument('--epochs', type=int, default=300, metavar='N',
+    parser.add_argument('--epochs', type=int, default=500, metavar='N',
                         help='number of epochs to train (default: 1000)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
@@ -125,7 +125,7 @@ def main():
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
     parser.add_argument('--model_name', type=str, default="LSTM")
-    parser.add_argument('--checkpoints_dir', type=str, default="./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos1/")
+    parser.add_argument('--checkpoints_dir', type=str, default="./checkpoints/Tend_LSTM_L2_bs16_traindeg0_bsfirst_pos1_rs_freq/")
     parser.add_argument('--lstm_layers', type=int, default=2)
     args = parser.parse_args()
 
@@ -141,7 +141,7 @@ def main():
     lstm_train_loss = []
     if "LSTM" in args.model_name:
         print('Training LSTM.')
-        model = LSTMNet(num_layers=args.lstm_layers).to(device)
+        model = LSTMNet(inp_dim=3, num_layers=args.lstm_layers).to(device)
         lr = 10*1e-4
     else:
         print('Training FFN.')

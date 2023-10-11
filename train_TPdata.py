@@ -8,17 +8,19 @@ import math
 import numpy as np
 from torch.utils.data import DataLoader
 from tendon_polymer_dataset import Tendon_polymer_Dataset
+from tendon_catheter_dataset import Tendon_catheter_Dataset
 import os
 
 criterionMSE = nn.MSELoss()
 
 class LSTMNet(nn.Module):
 
-    def __init__(self, inp_dim=3, hidden_dim=64, num_layers=3, dropout=0):
+    def __init__(self, inp_dim=3, hidden_dim=64, num_layers=3, dropout=0, act=None):
         super(LSTMNet, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
         self.output_dim = 1
+        self.act = act
 
         self.rnn = nn.LSTM(inp_dim, self.hidden_dim, dropout=dropout, num_layers=self.num_layers, batch_first=True)
         self.linear = nn.Linear(hidden_dim, self.output_dim)
@@ -27,12 +29,13 @@ class LSTMNet(nn.Module):
 
     def forward(self, points, hidden):
         lstm_out, h_ = self.rnn(points, hidden)
-        # lstm_out = F.tanh(lstm_out)
-        # lstm_out = F.relu(lstm_out)
+        if self.act == "tanh":
+            lstm_out = F.tanh(lstm_out)
+        elif self.act == "relu":
+            lstm_out = F.relu(lstm_out)
         linear_out = self.linear(lstm_out)
         # out = F.log_softmax(linear_out, dim=1)
         return linear_out, h_
-
 
 class FFNet(nn.Module):
 
@@ -111,7 +114,7 @@ def main():
     parser = argparse.ArgumentParser(description='PyTorch Example')
     parser.add_argument('--batch_size', type=int, default=16, metavar='N',
                         help='input batch size for training (default: 16)')
-    parser.add_argument('--epochs', type=int, default=500, metavar='N',
+    parser.add_argument('--epochs', type=int, default=1000, metavar='N',
                         help='number of epochs to train (default: 1000)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
@@ -123,7 +126,7 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--model_name', type=str, default="LSTM")
     parser.add_argument('--checkpoints_dir', type=str,
-                        default="./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs/")
+                        default="./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos0_downsp_rs_tanh/")
     parser.add_argument('--lstm_layers', type=int, default=2)
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -133,13 +136,17 @@ def main():
 
     if not os.path.exists(args.checkpoints_dir):
         os.makedirs(args.checkpoints_dir)
-
+    filepath = "./tendon_data/20230928/all_data"
+    train_f = [1, 2, 4, 5, 6, 7, 9, 10]
+    test_f = [3, 8]
+    pos = 0
+    act = "tanh"
     lstm_test_acc = []
     lstm_train_loss = []
     if "LSTM" in args.model_name:
         print('Training LSTM.')
-        model = LSTMNet(num_layers=args.lstm_layers).to(device)
-        lr = 10*1e-4
+        model = LSTMNet(inp_dim=3, num_layers=args.lstm_layers, act=act).to(device)
+        lr = 10 * 1e-4  # 10 * 1e-4
     else:
         print('Training FFN.')
         model = FFNet().to(device)
@@ -147,11 +154,11 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     # lr 5*1e-4 for FFN, 10*1e-4 for LSTM
     if "LSTM" in args.model_name:
-        train_dataset = Tendon_polymer_Dataset("train")
-        test_dataset = Tendon_polymer_Dataset("test")
+        train_dataset = Tendon_catheter_Dataset("train", filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
+        test_dataset = Tendon_catheter_Dataset("test", filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
     else:
-        train_dataset = Tendon_polymer_Dataset("train", seg=1)
-        test_dataset = Tendon_polymer_Dataset("test", seg=1)
+        train_dataset = Tendon_catheter_Dataset("train", seg=1, filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
+        test_dataset = Tendon_catheter_Dataset("test", seg=1, filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
     train_data = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     test_data = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
     min_test_acc = 1000
@@ -167,7 +174,7 @@ def main():
                 torch.save(model.state_dict(), args.checkpoints_dir +
                            "TP_" + args.model_name + "_L{}_bs{}_epoch{}.pt".format(str(args.lstm_layers),
                                                                                      str(args.batch_size), str(epoch)))
-            if epoch > 50 and test_acc < min_test_acc:
+            if epoch > 10 and test_acc < min_test_acc:
                 torch.save(model.state_dict(), args.checkpoints_dir +
                            "TP_" + args.model_name + "_L{}_bs{}_epoch{}_best{}.pt".format(str(args.lstm_layers),
                                                                                             str(args.batch_size),

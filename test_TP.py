@@ -21,8 +21,18 @@ if __name__ == '__main__':
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_lossall_bsfirst_pos0/TP_LSTM_L2_bs16_epoch821_best1.0714787524589833.pt"
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_lossall_bsfirst_pos1/TP_LSTM_L2_bs16_epoch602_best0.00028749535301764634.pt"
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos0_downsp/TP_LSTM_L2_bs16_epoch378_best0.2629610374569893.pt"
-    path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch491_best0.003824349737873203.pt"
-    path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch465_best0.003361720456986835.pt"
+    path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch491_best0.003824349737873203.pt"  # 1
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch493_best0.003302927802954065.pt"   # 1
+    path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs_epoch1000/TP_LSTM_L2_bs16_epoch500.pt"  # e1000
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_nofreq/TP_LSTM_L2_bs16_epoch570_best0.002318850920633658.pt"  # N
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_freq/TP_LSTM_L2_bs16_epoch296_best0.0026583852136115495.pt"   # N
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos0_downsp_rs_freq/TP_LSTM_L2_bs16_epoch653_best0.31328453672559636.pt"  # N
+    path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos0_downsp_rs_freq_flag/TP_LSTM_L2_bs16_epoch653_best0.2726905345916748.pt" # flag
+    # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_freq_flag/TP_LSTM_L2_bs16_epoch938_best0.338050996002398.pt" # flag
+    # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos1_downsp_rs_freq/TP_LSTM_L2_bs16_epoch74_best0.006707037848077323.pt"
+    path = "./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos0_downsp_rs/TP_LSTM_L2_bs16_epoch67_best1.1625116812555414.pt"
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch128_best0.011704374938026854.pt"
+    pos = 0
     model.load_state_dict(torch.load(path, map_location=device))
     model.cuda()
     model.eval()
@@ -37,10 +47,10 @@ if __name__ == '__main__':
     # print(y2)
     # print(y[::-1]-y2)
 
-    seg = 1
+    seg = 5
     test_freq = [3]
-    path = "./tendon_data/20230928/training_data"
-    path = "./tendon_data/20230928/eval_data/"   # 0baseline
+    path = "./tendon_data/20230928/training_data"  # Non-zero baseline
+    # path = "./tendon_data/20230928/eval_data/"   # 0baseline
     for i, freq in enumerate(test_freq):
         data_path = os.path.join(path, "data_{}.txt".format(str(freq)))
         data = np.loadtxt(data_path, dtype=np.float32, skiprows=1, delimiter=',', unpack=False, encoding='utf-8')
@@ -63,7 +73,11 @@ if __name__ == '__main__':
     h_ = hidden
     for i in range(data.shape[0]):
         joint = joints[i:i + 1, 0:1]
-        input_ = np.hstack([joint, pre_pos, freq])
+        # input_ = np.hstack([joint, pre_pos])  # freq
+        if pos == 1:
+            input_ = np.hstack([joint, pre_pos, freq])  # freq
+        else:
+            input_ = np.hstack([joint, np.array([[1]]).astype("float32")*(0 if i<=seg else 1), freq])  # flag, freq
         output, h_ = model(torch.tensor([input_]).to(device), h_)
         pre_pos = output.detach().cpu().numpy()[0]
         out.append(pre_pos[0])
@@ -81,7 +95,9 @@ if __name__ == '__main__':
     for i in range(data.shape[0]-seg):
         joint = joints[i+1:i + seg+1, 0:1]
         pre_pos = pos[i:i+seg, 0:1]
-        input_ = np.hstack([joint, pre_pos, freq])
+        # input_ = np.hstack([joint, pre_pos])  # freq
+        input_ = np.hstack([joint, pre_pos, freq])  # freq
+        # input_ = np.hstack([joint, 0 if i < seg else 1, freq])  # flag, freq
         output, h_ = model(torch.tensor([input_]).to(device), h_)
         predict_pos = output.detach().cpu().numpy()[0]
         out2.append(predict_pos[0, -1])
@@ -91,8 +107,8 @@ if __name__ == '__main__':
     plt.figure(figsize=(18, 12))
     plt.tick_params(labelsize=30)
     # plt.plot(data[seg:, 1], out2[:] * 100 + 30, 'g--', linewidth=4, label="LSTM prediction")
+    plt.plot(data[seg:, 1], data[seg:, 6] + 30, 'b-', linewidth=4, label="Ground truth (0.{}Hz)".format(test_freq[0]))
     plt.plot(data[seg:, 1], out[seg:, 0] * 100 + 30, 'r-', linewidth=4, label="LSTM prediction")
-    plt.plot(data[seg:, 1], data[seg:, 6] + 30, 'b-', linewidth=4, label="Ground truth (0.3Hz)")
     plt.xlim([-1, 6])
     plt.ylim([29, 100])
     plt.grid()
@@ -101,7 +117,7 @@ if __name__ == '__main__':
     plt.ylabel("Tip angle X (deg)", fontsize=35)
     plt.title("RMSE:{:.3f} (deg)".format(rmse_norm(out[seg:, 0] * 100, data[seg:, 6])), fontsize=35)
     # plt.savefig("./results/OurTendon-LSTM-0baselineForTrain-Non0Test0.3Hz.jpg")
-    plt.savefig("./results/OurTendon-LSTM-Non0baselineForTrain-0Test0.3Hz.jpg")
+    # plt.savefig("./results/OurTendon-LSTM-Non0baselineForTrain-0Test0.{}Hz.jpg".format(test_freq[0]))
     plt.show()
 
 

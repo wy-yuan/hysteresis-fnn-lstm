@@ -13,7 +13,7 @@ class tendonDataset(data.Dataset):
         self.stage = stage
         self.seg = seg
         self.data = []
-        path = "C:/Users/wangyuan/Documents/CV/BCH/data from Yash/Frequency_Trials/"
+        path = "./tendon_data/Frequency_Trials/"
         self.train_freq = ["10", "20", "30"]  # [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
         self.test_freq = ["15"]  # [0.15, 0.45]
         if stage == "train":
@@ -50,8 +50,8 @@ class tendonDataset(data.Dataset):
     def __getitem__(self, index):
         # tendon_disp = self.data[index][:, [1]]
         # tip_pos = self.data[index][:, 3:6]
-        # rs = np.random.randint(1, 10, 1)[0]  # set random resample rate
-        rs = 1
+        rs = np.random.randint(1, 10, 1)[0]  # set random resample rate
+        # rs = 1
         if self.stage == "train":
             data_ind = np.random.randint(0, len(self.train_freq), 1)[0]
         elif self.stage == "test":
