@@ -21,17 +21,20 @@ if __name__ == '__main__':
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_lossall_bsfirst_pos0/TP_LSTM_L2_bs16_epoch821_best1.0714787524589833.pt"
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_lossall_bsfirst_pos1/TP_LSTM_L2_bs16_epoch602_best0.00028749535301764634.pt"
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos0_downsp/TP_LSTM_L2_bs16_epoch378_best0.2629610374569893.pt"
-    path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch491_best0.003824349737873203.pt"  # 1
+    path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch491_best0.003824349737873203.pt"               # pos1 0
     # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch493_best0.003302927802954065.pt"   # 1
-    path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs_epoch1000/TP_LSTM_L2_bs16_epoch500.pt"  # e1000
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_rs_epoch1000/TP_LSTM_L2_bs16_epoch660_best0.0027087389638549403.pt" # pos1 Non0
     # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_nofreq/TP_LSTM_L2_bs16_epoch570_best0.002318850920633658.pt"  # N
     # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos1_downsp_freq/TP_LSTM_L2_bs16_epoch296_best0.0026583852136115495.pt"   # N
     # path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos0_downsp_rs_freq/TP_LSTM_L2_bs16_epoch653_best0.31328453672559636.pt"  # N
-    path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos0_downsp_rs_freq_flag/TP_LSTM_L2_bs16_epoch653_best0.2726905345916748.pt" # flag
-    # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_freq_flag/TP_LSTM_L2_bs16_epoch938_best0.338050996002398.pt" # flag
+    path = "./checkpoints/TP_LSTM_L2_bs16_trainNon0baseline_bsfirst_pos0_downsp_rs_freq_flag/TP_LSTM_L2_bs16_epoch123_best0.4026415097086053.pt"   # pos0 Non0
+    path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos0_downsp_rs/TP_LSTM_L2_bs16_epoch64_best2.507126061539901.pt"                 # pos0 0
+    # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_freq_flag/TP_LSTM_L2_bs16_epoch938_best0.338050996002398.pt" # flag02HZ seg50
+    # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_seg100/TP_LSTM_L2_bs16_epoch949_best0.20560210119736821.pt" # flag02HZ seg100
+    # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_seg20/TP_LSTM_L2_bs16_epoch658_best0.8808559430272955.pt" # flag02HZ seg20
     # path = "./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos1_downsp_rs_freq/TP_LSTM_L2_bs16_epoch74_best0.006707037848077323.pt"
-    path = "./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos0_downsp_rs/TP_LSTM_L2_bs16_epoch67_best1.1625116812555414.pt"
-    # path = "./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch128_best0.011704374938026854.pt"
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos0_downsp_rs/TP_LSTM_L2_bs16_epoch769_best1.5266505668037815.pt"  # pos0 all
+    # path = "./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos1_downsp_rs/TP_LSTM_L2_bs16_epoch750.pt"  # pos1 all
     pos = 0
     model.load_state_dict(torch.load(path, map_location=device))
     model.cuda()
@@ -47,7 +50,7 @@ if __name__ == '__main__':
     # print(y2)
     # print(y[::-1]-y2)
 
-    seg = 5
+    seg = 10
     test_freq = [3]
     path = "./tendon_data/20230928/training_data"  # Non-zero baseline
     # path = "./tendon_data/20230928/eval_data/"   # 0baseline

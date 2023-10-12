@@ -126,7 +126,7 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--model_name', type=str, default="LSTM")
     parser.add_argument('--checkpoints_dir', type=str,
-                        default="./checkpoints/TP_LSTM_L2_bs16_trainAll_bsfirst_pos0_downsp_rs_tanh/")
+                        default="./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_seg20/")
     parser.add_argument('--lstm_layers', type=int, default=2)
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -137,10 +137,11 @@ def main():
     if not os.path.exists(args.checkpoints_dir):
         os.makedirs(args.checkpoints_dir)
     filepath = "./tendon_data/20230928/all_data"
-    train_f = [1, 2, 4, 5, 6, 7, 9, 10]
-    test_f = [3, 8]
+    train_l = ["2_2"]  # "1_1", "1_2", "1_4", "1_5", "2_1", "2_4", "2_5"
+    test_l = ["2_2"]  # "1_3", "2_3"
     pos = 0
-    act = "tanh"
+    seg = 20
+    act = None
     lstm_test_acc = []
     lstm_train_loss = []
     if "LSTM" in args.model_name:
@@ -154,11 +155,11 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     # lr 5*1e-4 for FFN, 10*1e-4 for LSTM
     if "LSTM" in args.model_name:
-        train_dataset = Tendon_catheter_Dataset("train", filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
-        test_dataset = Tendon_catheter_Dataset("test", filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
+        train_dataset = Tendon_catheter_Dataset("train", seg=seg, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
+        test_dataset = Tendon_catheter_Dataset("test", seg=seg, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
     else:
-        train_dataset = Tendon_catheter_Dataset("train", seg=1, filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
-        test_dataset = Tendon_catheter_Dataset("test", seg=1, filepath=filepath, train_freq=train_f, test_freq=test_f, pos=pos)
+        train_dataset = Tendon_catheter_Dataset("train", seg=1, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
+        test_dataset = Tendon_catheter_Dataset("test", seg=1, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
     train_data = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     test_data = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
     min_test_acc = 1000

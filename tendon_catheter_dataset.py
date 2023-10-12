@@ -6,24 +6,26 @@ import os
 
 class Tendon_catheter_Dataset(data.Dataset):
 
-    def __init__(self, stage, seg=50, filepath="./tendon_data/20230928/training_data", train_freq=[1,2,4,5], test_freq=[3], pos=1):
+    def __init__(self, stage, seg=50, filepath="./tendon_data/20230928/training_data", train_list=[1,2,4,5], test_list=[3], pos=1):
         self.stage = stage
         self.seg = seg
         self.data = []
         self.pos = pos
-        self.train_freq = train_freq  # [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
-        self.test_freq = test_freq  # [0.15, 0.45]
+        self.train_list = train_list  # [0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5]
+        self.test_list = test_list  # [0.15, 0.45]
         if stage == "train":
             # path = "./tendon_data/20230928/training_data"
-            for i, freq in enumerate(self.train_freq):
-                data_path = os.path.join(filepath, "data_{}.txt".format(str(freq)))
+            for i, name in enumerate(self.train_list):
+                data_path = os.path.join(filepath, "data_{}.txt".format(str(name)))
+                freq = float(name.split("_")[-1])
                 data = self.load_data(data_path, freq)
                 self.data.append(data)
 
         elif stage == "test":
             # path = "./tendon_data/20230928/training_data"
-            for i, freq in enumerate(self.test_freq):
-                data_path = os.path.join(filepath, "data_{}.txt".format(str(freq)))
+            for i, name in enumerate(self.test_list):
+                data_path = os.path.join(filepath, "data_{}.txt".format(str(name)))
+                freq = float(name.split("_")[-1])
                 data = self.load_data(data_path, freq)
                 self.data.append(data)
 
@@ -47,9 +49,9 @@ class Tendon_catheter_Dataset(data.Dataset):
         rs = np.random.randint(1, 10, 1)[0]
         # rs = 1
         if self.stage == "train":
-            data_ind = np.random.randint(0, len(self.train_freq), 1)[0]
+            data_ind = np.random.randint(0, len(self.train_list), 1)[0]
         elif self.stage == "test":
-            data_ind = np.random.randint(0, len(self.test_freq), 1)[0]
+            data_ind = np.random.randint(0, len(self.test_list), 1)[0]
         seq_ind = np.random.randint(1, self.data[data_ind].shape[0] - self.seg*rs, 1)[0]
         if self.pos == 1:
             tendon_disp = np.hstack([self.data[data_ind][[seq_ind+j*rs for j in range(self.seg)], 1:2]/6,
