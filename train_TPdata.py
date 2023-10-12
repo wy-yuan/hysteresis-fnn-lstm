@@ -126,7 +126,7 @@ def main():
                         help='For Saving the current Model')
     parser.add_argument('--model_name', type=str, default="LSTM")
     parser.add_argument('--checkpoints_dir', type=str,
-                        default="./checkpoints/TP_LSTM_L2_bs16_train0baseline02HZ_bsfirst_pos0_downsp_rs_seg20/")
+                        default="./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos1_downsp_rs_epoch1000/")
     parser.add_argument('--lstm_layers', type=int, default=2)
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -137,10 +137,10 @@ def main():
     if not os.path.exists(args.checkpoints_dir):
         os.makedirs(args.checkpoints_dir)
     filepath = "./tendon_data/20230928/all_data"
-    train_l = ["2_2"]  # "1_1", "1_2", "1_4", "1_5", "2_1", "2_4", "2_5"
-    test_l = ["2_2"]  # "1_3", "2_3"
-    pos = 0
-    seg = 20
+    train_l = ["2_1", "2_4", "2_5", "2_2"]  # "1_1", "1_2", "1_4", "1_5", "2_1", "2_4", "2_5"
+    test_l = ["2_3"]  # "1_3", "2_3"
+    pos = 1
+    seg = 50
     act = None
     lstm_test_acc = []
     lstm_train_loss = []
