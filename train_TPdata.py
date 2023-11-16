@@ -39,40 +39,45 @@ class LSTMNet(nn.Module):
 
 class FFNet(nn.Module):
 
-    def __init__(self, inp_dim=1, hidden_dim=64, dropout=0):
+    def __init__(self, inp_dim=3, hidden_dim=64, seg=1, dropout=0):
         super(FFNet, self).__init__()
         # self.num_layers = 5
-        self.output_dim = 3
+        self.output_dim = 1
         self.hidden_dim = hidden_dim
-        self.fc1 = nn.Linear(inp_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, self.output_dim)
+        self.fc1 = nn.Linear(inp_dim*seg, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)  # two hidden layers
+        self.fc3 = nn.Linear(hidden_dim, self.output_dim*seg)
 
     def forward(self, x):
+        x = torch.flatten(x, start_dim=1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc2(x))
         out = self.fc3(x)
+        out = out.unsqueeze(dim=2)
         return out
 
 
-def train(args, model, device, train_loader, optimizer, epoch, clip_value=100):
+def train(args, model, device, train_loader, optimizer, epoch, clip_value=100, model_name="LSTM"):
     model.train()
     for batch_idx, data in enumerate(train_loader):
         tendon_disp, tip_pos = data["tendon_disp"].to(device), data["tip_pos"].to(device)
         optimizer.zero_grad()
-        # print("**********", tendon_disp.shape)
-        bs = tendon_disp.shape[0]
-        hidden = (torch.zeros(model.num_layers, bs, model.hidden_dim).to(device),
-                  torch.zeros(model.num_layers, bs, model.hidden_dim).to(device))
-        output, h_ = model(tendon_disp, hidden)
 
+        bs = tendon_disp.shape[0]
+        if model_name == "LSTM":
+            hidden = (torch.zeros(model.num_layers, bs, model.hidden_dim).to(device),
+                      torch.zeros(model.num_layers, bs, model.hidden_dim).to(device))
+            output, h_ = model(tendon_disp, hidden)
+        else:
+            output = model(tendon_disp)
+        # print("out shape**********", output.shape)
         output = torch.transpose(output, 1, 2)
         poses = torch.transpose(tip_pos, 1, 2)
-        # print("*******", poses.shape)
+        # print("poses shape*******", poses.shape)
         # loss = F.pairwise_distance(output[:, :, :], poses[:, :, :], p=2)
         # loss = torch.mean(loss)
-        loss = criterionMSE(output, poses)*10000
+        loss = criterionMSE(output, poses) * 10000
         loss.backward()
         # torch.nn.utils.clip_grad_value_(model.parameters(), clip_value)
         optimizer.step()
@@ -82,7 +87,7 @@ def train(args, model, device, train_loader, optimizer, epoch, clip_value=100):
     return loss.item()
 
 
-def test(model, device, test_loader):
+def test(model, device, test_loader, model_name="LSTM"):
     model.eval()
     test_loss = 0
     total = 0
@@ -90,9 +95,12 @@ def test(model, device, test_loader):
         for b_idx, data in enumerate(test_loader):
             tendon_disp, tip_pos = data["tendon_disp"].to(device), data["tip_pos"].to(device)
             bs = tendon_disp.shape[0]
-            hidden = (torch.zeros(model.num_layers, bs, model.hidden_dim).to(device),
-                      torch.zeros(model.num_layers, bs, model.hidden_dim).to(device))
-            output, h_ = model(tendon_disp, hidden)
+            if model_name == "LSTM":
+                hidden = (torch.zeros(model.num_layers, bs, model.hidden_dim).to(device),
+                          torch.zeros(model.num_layers, bs, model.hidden_dim).to(device))
+                output, h_ = model(tendon_disp, hidden)
+            else:
+                output = model(tendon_disp)
             # print("test **********", output.size())
             output = torch.transpose(output, 1, 2)
             poses = torch.transpose(tip_pos, 1, 2)
@@ -124,9 +132,9 @@ def main():
                         help='how many batches to wait before logging training status')
     parser.add_argument('--save-model', action='store_true', default=True,
                         help='For Saving the current Model')
-    parser.add_argument('--model_name', type=str, default="LSTM")
+    parser.add_argument('--model_name', type=str, default="FNN")
     parser.add_argument('--checkpoints_dir', type=str,
-                        default="./checkpoints/TP_LSTM_L2_bs16_train0baseline_bsfirst_pos1_downsp_rs_epoch1000/")
+                        default="./checkpoints/TP_FNN_L2_bs16_pos0_downsp_rs/")
     parser.add_argument('--lstm_layers', type=int, default=2)
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -139,7 +147,7 @@ def main():
     filepath = "./tendon_data/20230928/all_data"
     train_l = ["2_1", "2_4", "2_5", "2_2"]  # "1_1", "1_2", "1_4", "1_5", "2_1", "2_4", "2_5"
     test_l = ["2_3"]  # "1_3", "2_3"
-    pos = 1
+    pos = 0
     seg = 50
     act = None
     lstm_test_acc = []
@@ -150,7 +158,7 @@ def main():
         lr = 10 * 1e-4  # 10 * 1e-4
     else:
         print('Training FFN.')
-        model = FFNet().to(device)
+        model = FFNet(inp_dim=3, seg=seg).to(device)
         lr = 5 * 1e-4
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     # lr 5*1e-4 for FFN, 10*1e-4 for LSTM
@@ -158,15 +166,15 @@ def main():
         train_dataset = Tendon_catheter_Dataset("train", seg=seg, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
         test_dataset = Tendon_catheter_Dataset("test", seg=seg, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
     else:
-        train_dataset = Tendon_catheter_Dataset("train", seg=1, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
-        test_dataset = Tendon_catheter_Dataset("test", seg=1, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
+        train_dataset = Tendon_catheter_Dataset("train", seg=seg, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
+        test_dataset = Tendon_catheter_Dataset("test", seg=seg, filepath=filepath, train_list=train_l, test_list=test_l, pos=pos)
     train_data = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
     test_data = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
     min_test_acc = 1000
     for epoch in range(1, args.epochs + 1):
         print('------Train epoch---------: {} \n'.format(epoch))
-        train_acc = train(args, model, device, train_data, optimizer, epoch)
-        test_acc = test(model, device, test_data)
+        train_acc = train(args, model, device, train_data, optimizer, epoch, model_name=args.model_name)
+        test_acc = test(model, device, test_data, model_name=args.model_name)
 
         lstm_test_acc.append(test_acc)
         lstm_train_loss.append(train_acc)
